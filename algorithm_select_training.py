@@ -12,6 +12,7 @@ training_options = {
     4: "gym",
     5: "swimming",
     6: "cycling",
+
     7: "basketball",
     8: "zumba",
     9: "squash"

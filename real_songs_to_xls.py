@@ -3,32 +3,31 @@ import pandas as pd
 import librosa
 from mutagen.mp3 import MP3
 
-# make a real database of song we have!
 
-# Define the path to the folder containing your MP3 files
-folder_path = '/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/MusicFiles'
+class SongDatabase:
+    def __init__(self, folder_path):
+        self.folder_path = folder_path
+        self.songs_data = []
 
-# Initialize an empty list to store song information
-songs_data = []
+    def extract_bpm(self, y, sr):
+        # Try the primary method first
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        if tempo == 0:
+            # Fallback method
+            onset_env = librosa.onset.onset_strength(y, sr=sr)
+            tempo = librosa.feature.tempo(onset_envelope=onset_env, sr=sr)[0]
+        return tempo
 
-
-# Function to extract BPM
-def extract_bpm(y, sr):
-    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    return tempo
-
-
-# Loop through each file in the folder
-for filename in os.listdir(folder_path):
-    if filename.endswith(".mp3"):
-        file_path = os.path.join(folder_path, filename)
-
+    def process_file(self, file_path, filename):
         try:
             # Load the audio file with librosa
             y, sr = librosa.load(file_path)
 
             # Extract BPM
-            bpm = extract_bpm(y, sr)
+            bpm = self.extract_bpm(y, sr)
+
+            # Log the detected BPM
+            print(f"Detected BPM for {filename}: {bpm}")
 
             # Load the audio file with mutagen to get the duration
             audio = MP3(file_path)
@@ -36,21 +35,35 @@ for filename in os.listdir(folder_path):
             duration_minutes = duration_seconds / 60  # Convert from seconds to minutes
 
             # Append the song information to the list
-            songs_data.append({
+            self.songs_data.append({
                 "Song ID": filename,
                 "Duration (minutes)": duration_minutes,
                 "Duration (seconds)": duration_seconds,
                 "Duration (f)": duration_seconds,
-                "BPM": bpm
+                "BPM": bpm if bpm > 0 else "Unknown"  # Handle case where BPM is 0
             })
+            print(f"Processed file: {filename}")
         except Exception as e:
             print(f"Could not process file {file_path}: {e}")
 
-# Create a DataFrame
-df = pd.DataFrame(songs_data)
+    def create_database(self):
+        # Loop through each file in the folder
+        for filename in os.listdir(self.folder_path):
+            if filename.endswith(".mp3"):
+                file_path = os.path.join(self.folder_path, filename)
+                print(f"Processing file: {file_path}")
+                self.process_file(file_path, filename)
+            else:
+                print(f"Ignored file: {filename}")
 
-# Save to Excel file
-output_file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/songs_data.xlsx'
-df.to_excel(output_file_path, index=False)
+    def get_songs_data(self):
+        return self.songs_data
 
-print(f"Excel file created at: {output_file_path}")
+
+def save_songs_to_excel(songs_data, output_file_path):
+    # Create a DataFrame
+    df = pd.DataFrame(songs_data)
+
+    # Save to Excel file
+    df.to_excel(output_file_path, index=False)
+    print(f"Excel file created at: {output_file_path}")

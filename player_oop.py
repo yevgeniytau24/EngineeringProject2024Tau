@@ -6,6 +6,7 @@ import os
 import math
 import time
 
+
 class MusicPlayer:
     def __init__(self, root):
         self.root = root
@@ -33,10 +34,14 @@ class MusicPlayer:
         self.songlist = Listbox(self.root, bg="black", fg="lime", font=("Helvetica", 16), width=100, height=15)
         self.songlist.pack()
 
-        self.play_btn_img = PhotoImage(file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nplay button_player_icon.png')
-        self.pause_btn_img = PhotoImage(file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/npause_player_icon.png')
-        self.next_btn_img = PhotoImage(file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nnext_player_icon.png')
-        self.prev_btn_img = PhotoImage(file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nprevious_icon.png')
+        self.play_btn_img = PhotoImage(
+            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nplay button_player_icon.png')
+        self.pause_btn_img = PhotoImage(
+            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/npause_player_icon.png')
+        self.next_btn_img = PhotoImage(
+            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nnext_player_icon.png')
+        self.prev_btn_img = PhotoImage(
+            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nprevious_icon.png')
 
         control_frame = Frame(self.root)
         control_frame.pack()
@@ -83,6 +88,15 @@ class MusicPlayer:
         for song in self.songs:
             self.songlist.insert("end", song)
 
+        if self.songs:
+            self.songlist.selection_set(0)
+            self.current_song = self.songs[self.songlist.curselection()[0]]
+
+    def load_selected_songs(self, selected_songs):
+        self.songs = selected_songs['Song ID'].tolist()
+        self.songlist.delete(0, tk.END)
+        for song in self.songs:
+            self.songlist.insert("end", song)
         if self.songs:
             self.songlist.selection_set(0)
             self.current_song = self.songs[self.songlist.curselection()[0]]
@@ -157,7 +171,8 @@ class MusicPlayer:
 
     def play_selected_songs(self):
         if self.current_song_index < len(self.selected_songs):
-            song_path = os.path.join('/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/MusicFiles', self.selected_songs.iloc[self.current_song_index]['Song ID'])
+            song_path = os.path.join('/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/MusicFiles',
+                                     self.selected_songs.iloc[self.current_song_index]['Song ID'])
             pygame.mixer.music.load(song_path)
             pygame.mixer.music.play()
             self.current_song_index += 1
@@ -171,11 +186,14 @@ class MusicPlayer:
         else:
             self.root.after(1000, self.check_if_song_finished)
 
+
 # Algorithm to select songs based on user input
 def select_songs():
     # Load the Excel file
     file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/songs_data.xlsx'
     df = pd.read_excel(file_path)
+    # # Ensure 'BPM' column is converted to integer
+    # df['BPM'] = pd.to_numeric(df['BPM'], errors='coerce').fillna(0).astype(int)
 
     # Mapping numbers to training types and preferences
     training_options = {
@@ -258,10 +276,10 @@ def select_songs():
     }
 
     bpm_range = training_bpm_ranges[training][intense - 1]
-    filtered_songs = df[(df['BPM'] >= bpm_range[0]) & (df['BPM'] <= bpm_range[1])]
+    filtered_songs = df[(df['BPM'].str.strip('[]').astype(float) >= bpm_range[0]) & (df['BPM'].str.strip('[]').astype(float) <= bpm_range[1])]
 
     if filtered_songs.empty:
-        print("No songs found in the specified BPM range.")
+        print("No songs found in the specified BPM range: " + str(bpm_range))
         return None
 
     if bpm_preference == "increased":
@@ -292,7 +310,7 @@ def select_songs():
         min_bpm = bpm_range[0] + segment * bpm_step
         max_bpm = bpm_range[0] + (segment + 1) * bpm_step
 
-        segment_songs = filtered_songs[(filtered_songs['BPM'] >= min_bpm) & (filtered_songs['BPM'] < max_bpm)]
+        segment_songs = filtered_songs[(filtered_songs['BPM'].str.strip('[]').astype(float) >= min_bpm) & (filtered_songs['BPM'].str.strip('[]').astype(float) < max_bpm)]
         if not segment_songs.empty:
             song = segment_songs.sample(n=1).iloc[0]  # Select a random song from the segment
             total_duration += song['Duration (minutes)']
@@ -350,5 +368,6 @@ if __name__ == "__main__":
         root = tk.Tk()
         player = MusicPlayer(root)
         player.selected_songs = selected_songs
+        player.load_selected_songs(selected_songs)  # Load the selected songs into the player
         player.play_music()
         root.mainloop()
