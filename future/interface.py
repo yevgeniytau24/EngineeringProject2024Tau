@@ -1,0 +1,180 @@
+import pandas as pd
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+import real_songs_to_xls
+from MusicPlayer.player_oop_new import MusicPlayer
+
+folder_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/mp3music_files'
+output_file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/real_songs_data.xlsx'
+
+
+def sync_database():
+    song_db = real_songs_to_xls.SongDatabase(folder_path)
+    song_db.create_database()
+    real_songs_to_xls.save_songs_to_excel(song_db.get_songs_data(), output_file_path)
+    messagebox.showinfo("Info", "Database synced successfully!")
+
+
+def select_songs(training, intense, duration, bpm_preference):
+    global df
+
+    df = pd.read_excel(output_file_path)
+
+    # Ensure 'BPM' column is converted to float after removing brackets and spaces
+    df['BPM_clean'] = df['BPM'].str.strip('[]').astype(float)
+
+    # Define BPM ranges for different training types
+    training_bpm_ranges = {
+        "running": [(120, 150), (150, 180), (160, 200)],
+        "walking": [(90, 110), (110, 130), (130, 150)],
+        "yoga": [(50, 80), (80, 100), (100, 140)],
+        "gym": [(100, 120), (120, 160), (110, 140), (140, 180)],
+        "swimming": [(120, 140), (140, 170), (160, 190)],
+        "cycling": [(120, 140), (140, 170), (160, 200)],
+        "basketball": [(120, 150), (150, 180)],
+        "zumba": [(120, 140), (140, 170)],
+        "squash": [(140, 160), (160, 180), (180, 200)]
+    }
+
+    bpm_range = training_bpm_ranges[training][intense - 1]
+    filtered_songs = df[(df['BPM_clean'] >= bpm_range[0]) & (df['BPM_clean'] <= bpm_range[1])]
+
+    if filtered_songs.empty:
+        messagebox.showinfo("Info", "No songs found in the specified BPM range: " + str(bpm_range))
+        return None
+
+    if bpm_preference == "increased":
+        filtered_songs = filtered_songs.sort_values(by='BPM').reset_index(drop=True)
+    elif bpm_preference == "decreased":
+        filtered_songs = filtered_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
+    elif bpm_preference == "parabolic+":
+        midpoint = len(filtered_songs) // 2
+        first_half = filtered_songs.iloc[:midpoint].sort_values(by='BPM').reset_index(drop=True)
+        second_half = filtered_songs.iloc[midpoint:].sort_values(by='BPM', ascending=False).reset_index(drop=True)
+        filtered_songs = pd.concat([first_half, second_half]).reset_index(drop=True)
+    elif bpm_preference == "parabolic-":
+        midpoint = len(filtered_songs) // 2
+        first_half = filtered_songs.iloc[:midpoint].sort_values(by='BPM', ascending=False).reset_index(drop=True)
+        second_half = filtered_songs.iloc[midpoint:].sort_values(by='BPM').reset_index(drop=True)
+        filtered_songs = pd.concat([first_half, second_half]).reset_index(drop=True)
+    elif bpm_preference == "shuffle":
+        filtered_songs = filtered_songs.sample(frac=1).reset_index(drop=True)
+
+    selected_songs = pd.DataFrame()
+    total_duration = 0
+
+    # Determine the number of segments to divide the BPM range into
+    num_segments = 10
+    bpm_step = (bpm_range[1] - bpm_range[0]) / num_segments
+
+    for segment in range(num_segments):
+        min_bpm = bpm_range[0] + segment * bpm_step
+        max_bpm = bpm_range[0] + (segment + 1) * bpm_step
+
+        segment_songs = filtered_songs[(filtered_songs['BPM'].str.strip('[]').astype(float) >= min_bpm) & (filtered_songs['BPM'].str.strip('[]').astype(float) < max_bpm)]
+        if not segment_songs.empty:
+            song = segment_songs.sample(n=1).iloc[0]  # Select a random song from the segment
+            total_duration += song['Duration (minutes)']
+            selected_songs = pd.concat([selected_songs, song.to_frame().T], ignore_index=True)
+            if total_duration >= duration:
+                break
+
+    # Select songs until the total duration is close to the input duration
+    for _, song in filtered_songs.iterrows():
+        if total_duration + song['Duration (minutes)'] > duration + 1:
+            continue
+        total_duration += song['Duration (minutes)']
+        selected_songs = pd.concat([selected_songs, song.to_frame().T], ignore_index=True)
+        if total_duration >= duration and total_duration - duration < 1:
+            break
+
+    if total_duration - duration >= 1:
+        # If we exceed the desired duration by 1 minute, try to remove the last song added
+        last_song_duration = selected_songs.iloc[-1]['Duration (minutes)']
+        if total_duration - last_song_duration >= duration and total_duration - last_song_duration - duration < 1:
+            total_duration -= last_song_duration
+            selected_songs = selected_songs[:-1]
+
+    # Ensure the selected songs cover the entire BPM range
+    if bpm_preference == "increased":
+        selected_songs = selected_songs.sort_values(by='BPM').reset_index(drop=True)
+    elif bpm_preference == "decreased":
+        selected_songs = selected_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
+    elif bpm_preference == "parabolic+":
+        selected_songs = pd.concat([
+            selected_songs.iloc[:len(selected_songs) // 2].sort_values(by='BPM'),
+            selected_songs.iloc[len(selected_songs) // 2:].sort_values(by='BPM', ascending=False)
+        ]).reset_index(drop=True)
+    elif bpm_preference == "parabolic-":
+        selected_songs = pd.concat([
+            selected_songs.iloc[:len(selected_songs) // 2].sort_values(by='BPM', ascending=False),
+            selected_songs.iloc[len(selected_songs) // 2:].sort_values(by='BPM')
+        ]).reset_index(drop=True)
+    elif bpm_preference == "shuffle":
+        selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)
+
+    print("Selected Songs for " + training + " that fixed to the bpm: " + str(bpm_range))
+    print(selected_songs)
+    print(f"Total Duration: {total_duration} minutes")
+
+    return selected_songs
+
+
+def run_algorithm():
+    training = training_var.get()
+    intense = int(intensity_var.get())
+    duration = int(duration_entry.get())
+    bpm_preference = bpm_preference_var.get()
+
+    selected_songs = select_songs(training, intense, duration, bpm_preference)
+
+    if selected_songs is not None and not selected_songs.empty:
+        root = tk.Tk()
+        player = MusicPlayer(root)
+        player.selected_songs = selected_songs
+        player.load_selected_songs(selected_songs)  # Load the selected songs into the player
+        player.play_selected_songs()
+        player.update_visual_effect()
+        player.update_timer()
+        root.mainloop()
+
+
+# Create the main Tkinter window
+app = tk.Tk()
+app.title("Song Selection for Training")
+
+# Create and place the input fields and labels
+ttk.Label(app, text="Training Type:").grid(row=0, column=0, padx=10, pady=5, sticky='w')
+training_var = tk.StringVar()
+training_combo = ttk.Combobox(app, textvariable=training_var, values=[
+    "running", "walking", "yoga", "gym", "swimming", "cycling", "basketball", "zumba", "squash"
+])
+training_combo.grid(row=0, column=1, padx=10, pady=5)
+
+ttk.Label(app, text="Intensity (1-3):").grid(row=1, column=0, padx=10, pady=5, sticky='w')
+intensity_var = tk.StringVar()
+intensity_combo = ttk.Combobox(app, textvariable=intensity_var, values=[1, 2, 3])
+intensity_combo.grid(row=1, column=1, padx=10, pady=5)
+
+ttk.Label(app, text="Duration (minutes):").grid(row=2, column=0, padx=10, pady=5, sticky='w')
+duration_entry = ttk.Entry(app, width=10)
+duration_entry.grid(row=2, column=1, padx=10, pady=5)
+
+ttk.Label(app, text="BPM Preference:").grid(row=3, column=0, padx=10, pady=5, sticky='w')
+bpm_preference_var = tk.StringVar()
+bpm_preference_combo = ttk.Combobox(app, textvariable=bpm_preference_var, values=[
+    "shuffle", "parabolic+", "parabolic-", "increased", "decreased"
+])
+bpm_preference_combo.grid(row=3, column=1, padx=10, pady=5)
+
+# Create and place the "Sync Database" button
+sync_button = ttk.Button(app, text="Sync Database", command=sync_database)
+sync_button.grid(row=4, column=0, padx=10, pady=5)
+
+# Create and place the "Run Algorithm" button
+run_button = ttk.Button(app, text="Run Algorithm", command=run_algorithm)
+run_button.grid(row=4, column=1, padx=10, pady=5)
+
+# Start the Tkinter main loop
+app.mainloop()

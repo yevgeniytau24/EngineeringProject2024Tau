@@ -8,7 +8,7 @@ def generate_random_song_data(num_songs):
         song_id = i + 1
         total_duration_seconds = random.randint(120, 315)  # Total duration between 2 and 10 minutes
         total_duration_minutes = total_duration_seconds / 60
-        bpm = random.randint(60, 180)  # BPM between 60 and 180
+        bpm = round(random.uniform(60, 180), 2)  # BPM between 60 and 180
         data.append({
             "Song ID": song_id,
             "Total Duration (minutes)": total_duration_minutes,
@@ -41,7 +41,7 @@ def save_to_excel(song_data, filename):
     df.to_excel(filename, index=False)
 
 # Generate random song data for 150 songs
-num_songs = 5000
+num_songs = 300
 song_data = generate_random_song_data(num_songs)
 
 # Save the data to an Excel file
