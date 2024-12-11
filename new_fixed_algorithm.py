@@ -3,10 +3,11 @@ import pandas as pd
 import tkinter as tk
 
 import real_songs_to_xls
-from MusicFiles.player_oop_new import MusicPlayer
+from MusicPlayer.player_oop_new import MusicPlayer
 
 
 def select_songs(folder_path, output_file_path):
+    global df
     print("do you want to sync the database?")
     syncing = input()
     if syncing == "yes":
@@ -19,8 +20,9 @@ def select_songs(folder_path, output_file_path):
         df = pd.read_excel(output_file_path)
     elif syncing == "no":
         df = pd.read_excel("/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/real_songs_data.xlsx")
-    # # Ensure 'BPM' column is converted to integer
-    # df['BPM'] = pd.to_numeric(df['BPM'], errors='coerce').fillna(0).astype(int)
+
+    # Ensure 'BPM' column is converted to float after removing brackets and spaces
+    df['BPM_clean'] = df['BPM'].str.strip('[]').astype(float)
 
     # Mapping numbers to training types and preferences
     training_options = {
@@ -103,7 +105,7 @@ def select_songs(folder_path, output_file_path):
     }
 
     bpm_range = training_bpm_ranges[training][intense - 1]
-    filtered_songs = df[(df['BPM'].str.strip('[]').astype(float) >= bpm_range[0]) & (df['BPM'].str.strip('[]').astype(float) <= bpm_range[1])]
+    filtered_songs = df[(df['BPM_clean'] >= bpm_range[0]) & (df['BPM_clean'] <= bpm_range[1])]
 
     if filtered_songs.empty:
         print("No songs found in the specified BPM range: " + str(bpm_range))
@@ -179,7 +181,7 @@ def select_songs(folder_path, output_file_path):
     elif bpm_preference == "shuffle":
         selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)
 
-    print("Selected Songs for Training:")
+    print("Selected Songs for " + training + " that fixed to the bpm: " + str(bpm_range))
     print(selected_songs)
     print(f"Total Duration: {total_duration} minutes")
 

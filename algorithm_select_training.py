@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the Excel file
-file_path = '/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/single_bpm_songs_data.xlsx'
+file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/single_bpm_songs_data.xlsx'
 df = pd.read_excel(file_path)
 
 # Mapping numbers to training types and preferences
@@ -12,7 +12,6 @@ training_options = {
     4: "gym",
     5: "swimming",
     6: "cycling",
-
     7: "basketball",
     8: "zumba",
     9: "squash"
@@ -154,6 +153,6 @@ else:
                 elif bpm_preference == "shuffle":
                     selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)
 
-                print("Selected Songs for Training:")
+                print("Selected Songs for : " + training + "with the bpm: " + str(bpm_range))
                 print(selected_songs)
                 print(f"Total Duration: {total_duration} minutes")

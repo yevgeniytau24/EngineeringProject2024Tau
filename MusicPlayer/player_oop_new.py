@@ -34,13 +34,13 @@ class MusicPlayer:
         self.songlist.pack()
 
         self.play_btn_img = PhotoImage(
-            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nplay button_player_icon.png')
+            file='/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/MusicPlayer/icons/nplay button_player_icon.png')
         self.pause_btn_img = PhotoImage(
-            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/npause_player_icon.png')
+            file='/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/MusicPlayer/icons/npause_player_icon.png')
         self.next_btn_img = PhotoImage(
-            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nnext_player_icon.png')
+            file='/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/MusicPlayer/icons/nnext_player_icon.png')
         self.prev_btn_img = PhotoImage(
-            file='/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/nprevious_icon.png')
+            file='/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/MusicPlayer/icons/nprevious_icon.png')
 
         control_frame = Frame(self.root)
         control_frame.pack()

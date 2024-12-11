@@ -54,11 +54,11 @@ def save_to_excel(song_data, filename):
     df.to_excel(filename, index=False)
 
 # Generate random song data for 150 songs
-num_songs = 1500
+num_songs = 15000
 song_data = generate_random_song_data(num_songs)
 
 # Save the data to an Excel file
-filename = "random_songs_data.xlsx"
+filename = "OLD_OLD/random_songs_data.xlsx"
 save_to_excel(song_data, filename)
 
 print(f"Random song data generated and saved to {filename}")

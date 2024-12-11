@@ -14,7 +14,7 @@ custom_cmap = mcolors.LinearSegmentedColormap.from_list(cmap_name, colors, N=n_b
 
 
 # Load the audio file
-file_path = '/Users/jennyafren/PycharmProjects/ElectricalEngineeringProject/MusicFiles/alarm2.wav'
+file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/mp3music_files/alarm.wav'
 if os.path.exists(file_path):
     print("File exists.")
 else:
@@ -23,6 +23,7 @@ else:
 y, sr = librosa.load(file_path)
 # Estimate the tempo (BPM)
 tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+tempo = tempo[0]
 print(f"Estimated tempo: {tempo:.2f} BPM")
 beat_times = librosa.frames_to_time(beat_frames, sr=sr)
 

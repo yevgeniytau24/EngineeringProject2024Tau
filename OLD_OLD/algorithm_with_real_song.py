@@ -2,7 +2,7 @@ import pandas as pd
 
 def select_songs():
     # Load the Excel file
-    file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/songs_data.xlsx'
+    file_path = '/OLD_OLD/songs_data.xlsx'
     df = pd.read_excel(file_path)
 
     # Mapping numbers to training types and preferences

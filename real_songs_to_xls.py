@@ -14,7 +14,7 @@ class SongDatabase:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         if tempo == 0:
             # Fallback method
-            onset_env = librosa.onset.onset_strength(y, sr=sr)
+            onset_env = librosa.onset.onset_strength(y=y, sr=sr)  # Corrected call
             tempo = librosa.feature.tempo(onset_envelope=onset_env, sr=sr)[0]
         return tempo
 
