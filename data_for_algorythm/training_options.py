@@ -27,8 +27,8 @@ intensity_options = {
 
 bpm_preferences = {
     1: "shuffle",
-    2: "parabolic+",
-    3: "parabolic-",
+    2: "parabolic-",
+    3: "parabolic+",
     4: "increased",
     5: "decreased"
 }

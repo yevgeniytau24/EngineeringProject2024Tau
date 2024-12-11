@@ -9,7 +9,7 @@ df = pd.read_excel(file_path)
 df['BPM'] = df['BPM'].astype(int)
 
 # Define constants
-THRESHOLD = 10  # ±10 BPM threshold
+THRESHOLD = 7.5
 
 # Get user inputs
 print("Choose your training type:")
@@ -35,8 +35,8 @@ elif training == "custom":
     interval_durations = []
 
     for i, (bpm, duration) in enumerate(custom_intervals):
-        min_bpm = bpm - bpm/THRESHOLD
-        max_bpm = bpm + bpm/THRESHOLD
+        min_bpm = bpm - bpm*(THRESHOLD/100)
+        max_bpm = bpm + bpm*(THRESHOLD/100)
         interval_songs = df[(df['BPM'] >= min_bpm) & (df['BPM'] <= max_bpm)].copy()  # Use .copy() to avoid warning
         # print(interval_songs)
         if interval_songs.empty:
@@ -108,6 +108,7 @@ else:
 #######from here#########
             bpm_range = training_bpm_ranges[training][intense - 1]
             filtered_songs = df[(df['BPM'] >= bpm_range[0]) & (df['BPM'] <= bpm_range[1])]
+            print(filtered_songs)
 
             if filtered_songs.empty:
                 print("No songs found in the specified BPM range.")
@@ -116,12 +117,12 @@ else:
                     filtered_songs = filtered_songs.sort_values(by='BPM').reset_index(drop=True)
                 elif bpm_preference == "decreased":
                     filtered_songs = filtered_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
-                elif bpm_preference == "parabolic+":
+                elif bpm_preference == "parabolic-":
                     midpoint = len(filtered_songs) // 2
                     first_half = filtered_songs.iloc[:midpoint].sort_values(by='BPM').reset_index(drop=True)
                     second_half = filtered_songs.iloc[midpoint:].sort_values(by='BPM', ascending=False).reset_index(drop=True)
                     filtered_songs = pd.concat([first_half, second_half]).reset_index(drop=True)
-                elif bpm_preference == "parabolic-":
+                elif bpm_preference == "parabolic+":
                     midpoint = len(filtered_songs) // 2
                     first_half = filtered_songs.iloc[:midpoint].sort_values(by='BPM', ascending=False).reset_index(drop=True)
                     second_half = filtered_songs.iloc[midpoint:].sort_values(by='BPM').reset_index(drop=True)
@@ -169,15 +170,15 @@ else:
                     selected_songs = selected_songs.sort_values(by='BPM').reset_index(drop=True)
                 elif bpm_preference == "decreased":
                     selected_songs = selected_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
-                elif bpm_preference == "parabolic+":
+                elif bpm_preference == "parabolic-":
                     selected_songs = pd.concat([selected_songs.iloc[:len(selected_songs)//2].sort_values(by='BPM'),
                                                 selected_songs.iloc[len(selected_songs)//2:].sort_values(by='BPM', ascending=False)]).reset_index(drop=True)
-                elif bpm_preference == "parabolic-":
+                elif bpm_preference == "parabolic+":
                     selected_songs = pd.concat([selected_songs.iloc[:len(selected_songs)//2].sort_values(by='BPM', ascending=False),
                                                 selected_songs.iloc[len(selected_songs)//2:].sort_values(by='BPM')]).reset_index(drop=True)
                 elif bpm_preference == "shuffle":
                     selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)
 
-                print("Selected Songs for : " + training + "with the bpm: " + str(bpm_range))
+                print("Selected Songs for : " + training + " with the bpm: " + str(bpm_range))
                 print(selected_songs)
                 print(f"Total Duration: {total_duration} minutes")
