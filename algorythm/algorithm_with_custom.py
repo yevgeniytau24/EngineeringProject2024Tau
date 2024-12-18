@@ -111,7 +111,7 @@ if __name__ == "__main__":
             else:
                 training_bpm_ranges = training_bpm_ranges_options
                 bpm_range = training_bpm_ranges[training][intense - 1]
-                filtered_songs = df[(df['BPM'] >= bpm_range[0]) & (df['BPM'] <= bpm_range[1])]
+                filtered_songs = df[(df['BPM'] >= bpm_range[0]) & (df['BPM'] <= bpm_range[1])].copy()
 
                 if filtered_songs.empty:
                     print("No songs found in the specified BPM range.")
