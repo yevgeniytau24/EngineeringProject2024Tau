@@ -138,6 +138,10 @@ if __name__ == "__main__":
                     elif bpm_preference == "decreased":
                         selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
                         selected_songs = selected_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
+                    elif bpm_preference == "shuffle":
+                        selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                        if isinstance(selected_songs, pd.DataFrame):
+                            selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)  # Shuffle rows in DataFrame
 
                     # selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
 
@@ -146,3 +150,4 @@ if __name__ == "__main__":
                     print(f"Total Duration: {total_duration:.2f} minutes")
                     print(f"Target Duration: {duration:.2f} minutes")
                     print(f"Error: {abs(total_duration - duration):.2f} minutes")
+                    print("Error in percents: " + str((1-(total_duration/duration))*100) + "%")
