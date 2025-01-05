@@ -109,79 +109,86 @@ class MusicPlayer:
         now_playing = os.path.basename(self.current_song)
         self.current_song_label.config(text=f"Now Playing: {now_playing}")
 
+    def load_songs(self, selected_songs_df):
+        # Clear existing songs and Listbox
+        self.songs = []
+        self.songlist.delete(0, tk.END)
+
+        # Populate songs from the DataFrame
+        for song_id in selected_songs_df['Song ID']:
+            song_path = os.path.join(SONGS_PATH, f"{song_id}.wav")
+            if os.path.exists(song_path):
+                self.songs.append(song_path)
+                self.songlist.insert(tk.END, os.path.basename(song_path))
+
+        # Debugging: Verify songs list
+        print(f"Songs loaded: {self.songs}")
+        print(f"Number of songs: {len(self.songs)}")
     def open_spectrogram(self):
         try:
-            # Check if a song is selected
-            selected_indices = self.songlist.curselection()
-            print(f"Selected indices: {selected_indices}")  # Debugging
-
-            if not selected_indices:
-                messagebox.showerror("Error", "No song selected. Please select a song.")
+            # Step 1: Validate the song list
+            if not self.songs or len(self.songs) == 0:
+                messagebox.showerror("Error",
+                                     "No songs available to show a spectrogram. Please load valid songs first.")
                 return
 
-            # Get the selected song index and validate it
+            # Step 2: Ensure a song is selected
+            selected_indices = self.songlist.curselection()
+            if not selected_indices:
+                messagebox.showerror("Error", "No song selected. Please select a song from the list.")
+                return
+
+            # Step 3: Validate the selected index
             selected_index = selected_indices[0]
-            print(f"Selected index: {selected_index}")  # Debugging
+            if selected_index < 0 or selected_index >= len(self.songs):
+                messagebox.showerror("Error", "Invalid selection. The selected index is out of range.")
+                return
 
-            if not self.songs or selected_index >= len(self.songs):
-                print(f"self.songs: {self.songs}")  # Debugging
-                raise IndexError("Selected index is out of range or song list is empty.")
-
-            # Get the file path of the selected song
+            # Step 4: Get the selected song path
             current_song = self.songs[selected_index]
-            print(f"Selected song path: {current_song}")  # Debugging
 
+            # Step 5: Validate the song file
             if not os.path.exists(current_song):
-                print(f"File not found: {current_song}")  # Debugging
-                raise FileNotFoundError(f"File does not exist at path: {current_song}")
+                messagebox.showerror("Error", f"File not found: {current_song}.")
+                return
 
-            # Create a new spectrogram window
+            if os.path.getsize(current_song) == 0:
+                messagebox.showerror("Error", "The selected audio file is empty or corrupted.")
+                return
+
+            # Step 6: Create the spectrogram window
             spectrogram_window = tk.Toplevel(self.root)
             spectrogram_window.title(f"Spectrogram - {os.path.basename(current_song)}")
             spectrogram_window.geometry("800x600")
 
-            # Create spectrogram plot using librosa
-            fig, ax = plt.subplots(figsize=(8, 4))
-            y, sr = librosa.load(current_song, sr=None)
-
+            # Step 7: Load and validate the audio file
+            y, sr = librosa.load(current_song, sr=22050)
             if len(y) == 0:
-                raise ValueError("Audio signal is empty. The file might be corrupted or unsupported.")
+                messagebox.showerror("Error", "Audio signal is empty or invalid.")
+                return
 
-            # Compute spectrogram
-            D = np.abs(librosa.stft(y, n_fft=2048, hop_length=512))
+            # Step 8: Compute the spectrogram with optimized parameters
+            n_fft = 1024
+            hop_length = 512
+            D = np.abs(librosa.stft(y, n_fft=n_fft, hop_length=hop_length))
             S_db = librosa.amplitude_to_db(D, ref=np.max)
 
-            # Custom colormap
-            colors = [(0.1, 0.1, 0.5), (0.5, 0.1, 0.1), (0.9, 0.9, 0.9)]
-            n_bins = 500
-            cmap_name = 'custom_blue'
-            custom_cmap = mcolors.LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
-
-            # Plot the spectrogram
-            librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='log', cmap=custom_cmap, ax=ax)
-            ax.set_title("Custom Spectrogram")
+            # Step 9: Plot the spectrogram
+            fig, ax = plt.subplots(figsize=(8, 4))
+            librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='log', ax=ax, cmap='viridis')
+            ax.set_title(f"Spectrogram - {os.path.basename(current_song)}")
             ax.set_xlabel("Time (s)")
             ax.set_ylabel("Frequency (Hz)")
             fig.colorbar(ax.images[0], format='%+2.0f dB')
 
-            # Display spectrogram in the new window
+            # Step 10: Display the spectrogram in the window
             canvas = FigureCanvasTkAgg(fig, master=spectrogram_window)
             canvas_widget = canvas.get_tk_widget()
             canvas_widget.pack(fill="both", expand=True)
             canvas.draw()
 
-        except IndexError as ie:
-            print(f"IndexError: {ie}")  # Debugging
-            messagebox.showerror("Error", f"Index Error: {ie}")
-        except FileNotFoundError as fnfe:
-            print(f"FileNotFoundError: {fnfe}")  # Debugging
-            messagebox.showerror("Error", str(fnfe))
-        except ValueError as ve:
-            print(f"ValueError: {ve}")  # Debugging
-            messagebox.showerror("Error", str(ve))
         except Exception as e:
-            print(f"Unexpected error: {e}")  # Debugging
-            messagebox.showerror("Error", f"Failed to generate spectrogram: {e}")
+            messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 
 
 # Functionality setup
