@@ -1,5 +1,55 @@
+import os
 import pandas as pd
 from data_for_algorythm.training_options import *
+
+
+# Mapping numbers to training types and preferences
+
+
+training_options = {
+    1: "running",
+    2: "walking",
+    3: "yoga",
+    4: "gym",
+    5: "swimming",
+    6: "cycling",
+    7: "basketball",
+    8: "zumba",
+    9: "squash",
+    10: "custom"
+}
+intensity_options = {
+    "running": 3,
+    "walking": 3,
+    "yoga": 3,
+    "gym": 4,
+    "swimming": 3,
+    "cycling": 3,
+    "basketball": 2,
+    "zumba": 2,
+    "squash": 3
+}
+
+bpm_preferences = {
+    1: "shuffle",
+    2: "parabolic-",
+    # 3: "parabolic+",
+    3: "increased",
+    4: "decreased"
+}
+
+training_bpm_ranges_options = {
+    "running": [(120, 150), (150, 180), (160, 200)],
+    "walking": [(90, 110), (110, 130), (130, 150)],
+    "yoga": [(50, 80), (80, 100), (100, 140)],
+    "gym": [(100, 120), (120, 160), (110, 140), (140, 180)],
+    "swimming": [(120, 140), (140, 170), (160, 190)],
+    "cycling": [(120, 140), (140, 170), (160, 200)],
+    "basketball": [(120, 150), (150, 180)],
+    "zumba": [(120, 140), (140, 170)],
+    "squash": [(140, 160), (160, 180), (180, 200)]
+}
+
 
 def select_songs_dynamic_programming(filtered_songs, target_duration):
     # Convert durations to integers (in seconds) to simplify calculations
@@ -24,17 +74,36 @@ def select_songs_dynamic_programming(filtered_songs, target_duration):
                     song_selection[i][t] = song_selection[i - 1][t - song_duration][:]
                     song_selection[i][t].append(i - 1)
 
+    # Convert song_selection to a DataFrame
+    song_selection_df = pd.DataFrame({
+        f"Time {t}": [song_selection[i][t] for i in range(len(filtered_songs) + 1)]
+        for t in range(target_seconds + 1)
+    })
+
+    # Save to Excel
+    output_file_path = "song_selection_dynamic_programming.xlsx"
+    song_selection_df.to_excel(output_file_path, index=True, index_label="Song Index")
+
+    print(f"Dynamic programming song selection has been saved to: {output_file_path}")
+
+
     # Backtrack to find the selected songs
     selected_indices = song_selection[len(filtered_songs)][target_seconds]
+    print(selected_indices)
     selected_songs = filtered_songs.iloc[selected_indices].copy()
 
     total_duration = dp[len(filtered_songs)][target_seconds] / 60  # Convert back to minutes
     selected_songs.drop(columns=['Duration Seconds'], inplace=True)  # Remove the duration seconds column
-    return selected_songs, round(total_duration, 2)
+    return selected_songs, round(total_duration, 4)
 
 if __name__ == "__main__":
+    username = os.getlogin()
+    if "jen" in username:
+        file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/single_bpm_songs_data.xlsx'
+    else:
+        file_path = '/Users/noazisbrod/Library/CloudStorage/OneDrive-mail.tau.ac.il/שלי/שנה ד/סמס א/EngineeringProject2024Tau/single_bpm_songs_data.xlsx'
+
     # Load the Excel file
-    file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/single_bpm_songs_data.xlsx'
     df = pd.read_excel(file_path)
 
     # Ensure BPM is an integer
@@ -96,8 +165,16 @@ if __name__ == "__main__":
         if not (1 <= intense <= max_intensity):
             print("Invalid intensity level provided.")
         else:
-            print("How long will you train? (in minutes)")
-            duration = int(input().strip())
+            while True:
+                print("How long will you train? (in minutes)")
+                try:
+                    duration = int(input().strip())
+                    if duration > 0:
+                        break  # Valid duration entered, exit the loop
+                    else:
+                        print("Duration must be greater than 0. Please try again.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
 
             print("Choose your BPM preference:")
             for key, value in bpm_preferences.items():
@@ -112,6 +189,7 @@ if __name__ == "__main__":
                 training_bpm_ranges = training_bpm_ranges_options
                 bpm_range = training_bpm_ranges[training][intense - 1]
                 filtered_songs = df[(df['BPM'] >= bpm_range[0]) & (df['BPM'] <= bpm_range[1])].copy()
+                print(filtered_songs) #test
 
                 if filtered_songs.empty:
                     print("No songs found in the specified BPM range.")
@@ -138,11 +216,16 @@ if __name__ == "__main__":
                     elif bpm_preference == "decreased":
                         selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
                         selected_songs = selected_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
+                    elif bpm_preference == "shuffle":
+                        selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                        if isinstance(selected_songs, pd.DataFrame):
+                            selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)  # Shuffle rows in DataFrame
 
                     # selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
 
                     print("Selected Songs:")
                     print(selected_songs)
-                    print(f"Total Duration: {total_duration:.2f} minutes")
-                    print(f"Target Duration: {duration:.2f} minutes")
-                    print(f"Error: {abs(total_duration - duration):.2f} minutes")
+                    print(f"Total Duration: {total_duration:.4f} minutes")
+                    print(f"Target Duration: {duration:.4f} minutes")
+                    print(f"Error: {abs(total_duration - duration):.4f} minutes")
+                    print("Error in percents: " + str((1-(total_duration/duration))*100) + "%")

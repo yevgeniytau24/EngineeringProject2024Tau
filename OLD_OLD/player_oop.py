@@ -190,7 +190,7 @@ class MusicPlayer:
 # Algorithm to select songs based on user input
 def select_songs():
     # Load the Excel file
-    file_path = '/OLD_OLD/songs_data.xlsx'
+    file_path = '/Users/jennyafren/PycharmProjects/EngineeringProject2024Tau/single_bpm_songs_data.xlsx'
     df = pd.read_excel(file_path)
     # # Ensure 'BPM' column is converted to integer
     # df['BPM'] = pd.to_numeric(df['BPM'], errors='coerce').fillna(0).astype(int)
