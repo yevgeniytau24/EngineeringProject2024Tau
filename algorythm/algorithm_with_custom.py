@@ -51,28 +51,28 @@ training_bpm_ranges_options = {
 }
 
 
-def select_songs_dynamic_programming(filtered_songs, target_duration):
+def select_songs_dynamic_programming(filtered_songs: pd.DataFrame, target_duration: int):
     # Convert durations to integers (in seconds) to simplify calculations
     filtered_songs['Duration Seconds'] = (filtered_songs['Total Duration (minutes)'] * 60).astype(int)
     target_seconds = int(target_duration * 60)
 
     # Initialize the DP table
-    dp = [[0] * (target_seconds + 1) for _ in range(len(filtered_songs) + 1)]
     song_selection = [[[] for _ in range(target_seconds + 1)] for _ in range(len(filtered_songs) + 1)]
 
     for i in range(1, len(filtered_songs) + 1):
         song_duration = filtered_songs.iloc[i - 1]['Duration Seconds']
         for t in range(target_seconds + 1):
             # Exclude the current song
-            dp[i][t] = dp[i - 1][t]
             song_selection[i][t] = song_selection[i - 1][t][:]
 
             # Include the current song if it fits
             if t >= song_duration:
-                if dp[i - 1][t - song_duration] + song_duration > dp[i][t]:
-                    dp[i][t] = dp[i - 1][t - song_duration] + song_duration
+                current_count = len(song_selection[i - 1][t - song_duration]) + 1
+                previous_count = len(song_selection[i][t])
+                if current_count > previous_count:
                     song_selection[i][t] = song_selection[i - 1][t - song_duration][:]
                     song_selection[i][t].append(i - 1)
+                    pass
 
     # Convert song_selection to a DataFrame
     song_selection_df = pd.DataFrame({
@@ -86,15 +86,19 @@ def select_songs_dynamic_programming(filtered_songs, target_duration):
 
     print(f"Dynamic programming song selection has been saved to: {output_file_path}")
 
-
     # Backtrack to find the selected songs
-    selected_indices = song_selection[len(filtered_songs)][target_seconds]
+    best_time = target_seconds
+    for i in range(target_seconds):
+        selected_indices = song_selection[len(filtered_songs) - i][target_seconds]
+        if len(selected_indices) > 0:
+            break
+        best_time -= 1
     print(selected_indices)
+    actual_duration = round(best_time / 60, 4)
     selected_songs = filtered_songs.iloc[selected_indices].copy()
-
-    total_duration = dp[len(filtered_songs)][target_seconds] / 60  # Convert back to minutes
     selected_songs.drop(columns=['Duration Seconds'], inplace=True)  # Remove the duration seconds column
-    return selected_songs, round(total_duration, 4)
+    return selected_songs, actual_duration
+
 
 if __name__ == "__main__":
     username = os.getlogin()
@@ -145,14 +149,14 @@ if __name__ == "__main__":
                 interval_durations.append(0)
                 continue
 
-            interval_selected_songs, total_duration = select_songs_dynamic_programming(interval_songs, duration)
+            interval_selected_songs, actual_duration = select_songs_dynamic_programming(interval_songs, duration)
 
             selected_songs = pd.concat([selected_songs, interval_selected_songs], ignore_index=True)
-            interval_durations.append(total_duration)
+            interval_durations.append(round(duration, 4))
             print(
                 f"Interval {i + 1}: BPM Range {min_bpm}-{max_bpm}, Target Duration: {duration} minutes, "
-                f"Actual Duration: {total_duration:.2f} minutes. "
-                f"Accuracy: {round((total_duration / duration) * 100, 4)}%"
+                f"Actual Duration: {duration:.2f} minutes. "
+                f"Accuracy: {round((actual_duration / duration) * 100, 4)}%"
             )
 
         print("\nSelected Songs for Custom Training:")
@@ -203,7 +207,7 @@ if __name__ == "__main__":
                     #         sorted_bpm.iloc[midpoint:].sort_values(by="BPM", ascending=True)  # Second half ascending
                     #     ]).reset_index(drop=True)
                     if bpm_preference == "parabolic-":
-                        selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                        selected_songs, actual_duration = select_songs_dynamic_programming(filtered_songs, duration)
                         sorted_bpm = selected_songs.sort_values(by="BPM", ascending=True).reset_index(drop=True)
                         midpoint = len(sorted_bpm) // 2
                         selected_songs = pd.concat([
@@ -211,21 +215,21 @@ if __name__ == "__main__":
                             sorted_bpm.iloc[midpoint:].sort_values(by="BPM", ascending=False)  # Second half descending
                         ]).reset_index(drop=True)
                     elif bpm_preference == "increased":
-                        selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                        selected_songs, actual_duration = select_songs_dynamic_programming(filtered_songs, duration)
                         selected_songs = selected_songs.sort_values(by='BPM').reset_index(drop=True)
                     elif bpm_preference == "decreased":
-                        selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                        selected_songs, actual_duration = select_songs_dynamic_programming(filtered_songs, duration)
                         selected_songs = selected_songs.sort_values(by='BPM', ascending=False).reset_index(drop=True)
                     elif bpm_preference == "shuffle":
-                        selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                        selected_songs, actual_duration = select_songs_dynamic_programming(filtered_songs, duration)
                         if isinstance(selected_songs, pd.DataFrame):
                             selected_songs = selected_songs.sample(frac=1).reset_index(drop=True)  # Shuffle rows in DataFrame
 
-                    # selected_songs, total_duration = select_songs_dynamic_programming(filtered_songs, duration)
+                    # selected_songs, actual_duration = select_songs_dynamic_programming(filtered_songs, duration)
 
                     print("Selected Songs:")
                     print(selected_songs)
-                    print(f"Total Duration: {total_duration:.4f} minutes")
+                    print(f"Total Duration: {actual_duration:.4f} minutes")
                     print(f"Target Duration: {duration:.4f} minutes")
-                    print(f"Error: {abs(total_duration - duration):.4f} minutes")
-                    print("Error in percents: " + str((1-(total_duration/duration))*100) + "%")
+                    print(f"Error: {abs(actual_duration - duration):.4f} minutes")
+                    print("Error in percents: " + str((1-(actual_duration/duration))*100) + "%")
